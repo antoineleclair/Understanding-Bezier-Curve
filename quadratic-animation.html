@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Understanding Quadratic Bézier Curve</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; }
+    </style>
+</head>
+<body>
+    <h1>Understanding Quadratic Bézier Curve</h1>
+    
+    <div id="bezier-example-1" style="position:relative;">
+        <canvas class="curve" style="position:absolute;top:0;left:0;z-index:4;"></canvas>
+        <canvas class="animation" style="position:absolute;top:0;left:0;z-index:3;"></canvas>
+        <canvas class="points" style="position:absolute;top:0;left:0;z-index:2;"></canvas>
+        <canvas class="grid" style="position:absolute;top:0;left:0;z-index:1;"></canvas>
+    </div>
+        
+    <p id="bezier-example-1-t">t = <span>0</span></p>
+    
+    <script type="text/javascript">
+        $(function() {
+            
+            var CANVAS_WIDTH = 301;
+            var CANVAS_HEIGHT = 301;
+            var p1x = 20;
+            var p1y = 200;
+            var cx = 140;
+            var cy = 20;
+            var p2x = 280;
+            var p2y = 280;
+            
+            var $t = $('#bezier-example-1-t span');
+            $('#bezier-example-1').css({
+                width: CANVAS_WIDTH + 'px',
+                height: CANVAS_HEIGHT + 'px'
+            });
+            var gridCanvas = $('#bezier-example-1 .grid').get(0);
+            var gridContext = gridCanvas.getContext('2d');
+            gridCanvas.width = CANVAS_WIDTH;
+            gridCanvas.height = CANVAS_HEIGHT;
+            
+            var pointsCanvas = $('#bezier-example-1 .points').get(0);
+            var pointsContext = pointsCanvas.getContext('2d');
+            pointsCanvas.width = CANVAS_WIDTH;
+            pointsCanvas.height = CANVAS_HEIGHT;
+            
+            var animationCanvas = $('#bezier-example-1 .animation').get(0);
+            var animationContext = animationCanvas.getContext('2d');
+            animationCanvas.width = CANVAS_WIDTH;
+            animationCanvas.height = CANVAS_HEIGHT;
+            
+            var curveCanvas = $('#bezier-example-1 .curve').get(0);
+            var curveContext = curveCanvas.getContext('2d');
+            curveCanvas.width = CANVAS_WIDTH;
+            curveCanvas.height = CANVAS_HEIGHT;
+            curveContext.strokeStyle = "#777";
+            curveContext.lineWidth = 2;
+            curveContext.beginPath();
+            curveContext.moveTo(p1x, p1y);
+            curveContext.stroke();
+            
+            drawGrid();
+            drawSetup();
+            setInterval(updateDemo, 1000/30);
+            
+            var t = 0;
+            var d = 1; // direction
+            
+            function updateDemo() {
+                if (t > 1 || t < 0) {
+                    d *= -1; // change direction
+                    curveContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                    curveContext.beginPath();
+                }
+                t += 0.01 * d; // continue moving
+                $t.html(Math.round(t*100)/100);
+                // update values
+                var c1x = p1x + (cx - p1x) * t;
+                var c1y = p1y + (cy - p1y) * t;
+                var c2x = cx + (p2x - cx) * t;
+                var c2y = cy + (p2y - cy) * t;
+                var tx = c1x + (c2x - c1x) * t;
+                var ty = c1y + (c2y - c1y) * t;
+                
+                animationContext.save();
+                // clear old sketch
+                animationContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                // draw new line
+                animationContext.beginPath();
+                animationContext.strokeStyle = '#aaa';
+                animationContext.lineWidth = 1;
+                animationContext.moveTo(c1x, c1y);
+                animationContext.lineTo(c2x, c2y);
+                animationContext.stroke();
+                // draw points on lines
+                drawPoint(animationContext, c1x, c1y, 2, '#0f0');
+                drawPoint(animationContext, c2x, c2y, 2, '#0f0');
+                // draw point on curve
+                drawPoint(animationContext, tx, ty, 3, '#f0f');
+                animationContext.restore();
+                
+                // draw the new Bézier curve segment
+                curveContext.lineTo(tx, ty);
+                curveContext.stroke();         
+            }            
+            
+            function drawSetup() {
+                
+                pointsContext.save();
+                // lines between p1, c and p2
+                pointsContext.strokeStyle = "#ddd";
+                pointsContext.lineWidth = 2;
+                pointsContext.beginPath();
+                pointsContext.moveTo(p1x, p1y);
+                pointsContext.lineTo(cx, cy);
+                pointsContext.lineTo(p2x, p2y);
+                pointsContext.stroke();
+                pointsContext.closePath();
+                // quadratic Bézier curve
+                pointsContext.beginPath();
+                pointsContext.strokeStyle = '#999';
+                pointsContext.lineWidth = 1;
+                pointsContext.moveTo(p1x, p1y);
+                pointsContext.quadraticCurveTo(cx,cy, p2x, p2y);
+                pointsContext.stroke();                
+                pointsContext.restore();
+                
+                // circles marking p1, c and p2
+                drawPoint(pointsContext, p1x, p1y, 5, '#00f');
+                drawPoint(pointsContext, cx, cy, 5, '#f00');
+                drawPoint(pointsContext, p2x, p2y, 5, '#00f');
+                pointsContext.fillText("P1", p1x+10, p1y+10);                
+                pointsContext.fillText("C", cx+10,  cy-5);                
+                pointsContext.fillText("P2", p2x-20, p2y+10);                
+            }
+            
+            function drawPoint(ctx, x, y, radius, color) {
+                ctx.save();
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 2 * Math.PI, false);
+                ctx.fill();
+                ctx.closePath();
+                ctx.restore();
+            }
+            
+            function drawGrid() {
+                gridContext.save();
+                gridContext.strokeStyle = '#ddd';
+                gridContext.lineWidth = 1;
+                for (var i = 0; i < CANVAS_HEIGHT; i += 20) {
+                    gridContext.beginPath();
+                    gridContext.moveTo(0, i);
+                    gridContext.lineTo(CANVAS_WIDTH, i);
+                    gridContext.stroke();
+                }
+                for (var i = 0; i < CANVAS_WIDTH; i += 20) {
+                    gridContext.beginPath();
+                    gridContext.moveTo(i, 0);
+                    gridContext.lineTo(i, CANVAS_HEIGHT);
+                    gridContext.stroke();
+                    gridContext.closePath();
+                }
+                gridContext.restore();
+            }
+        });
+    </script>
+</body>
+</html>
